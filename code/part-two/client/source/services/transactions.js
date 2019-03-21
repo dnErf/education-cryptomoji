@@ -14,6 +14,12 @@ const FAMILY_NAME = 'cryptomoji';
 const FAMILY_VERSION = '0.1';
 const NAMESPACE = '5f4d76';
 
+// takes a string and returns a hex-string sha-512 hash
+const hash = str => createHash('sha512').update(str).digest('hex');
+
+// returns a random 1-12 character string
+const getNonce = () => (Math.random() * 10 ** 18).toString(36);
+
 /**
  * A function that takes a private key and a payload and returns a new
  * signed Transaction instance.
@@ -29,7 +35,24 @@ const NAMESPACE = '5f4d76';
  */
 export const createTransaction = (privateKey, payload) => {
   // Enter your solution here
-
+  const publicKey = getPublicKey(privateKey);
+  const encodedPayload = encode(payload);
+  const header = TransactionHeader.encode({
+    signerPublicKey: publicKey,
+    batcherPublicKey: publicKey,
+    familyName: FAMILY_NAME,
+    familyVersion: FAMILY_VERSION,
+    inputs: [ NAMESPACE ],
+    outputs: [ NAMESPACE ],
+    nonce: getNonce(),
+    payloadSha512: hash(encodedPayload)
+  })
+    .finish();
+  return Transaction.create({
+    header,
+    headerSignature: sign(privateKey, header),
+    payload: encodedPayload
+  });
 };
 
 /**
@@ -41,7 +64,20 @@ export const createTransaction = (privateKey, payload) => {
  */
 export const createBatch = (privateKey, transactions) => {
   // Your code here
-
+  const publicKey = getPublicKey(privateKey);
+  if (!Array.isArray(transaction)) {
+    transactions = [ transactions ];
+  }
+  const header = BatchHeader.encode({
+    signerPublicKey: publicKey,
+    transactionIds: transactions.map(t => t.headerSignature)
+  })
+    .finish();
+  return Batch.create({
+    header,
+    headerSignature: sign(privateKey, header),
+    transactions
+  });
 };
 
 /**
@@ -74,5 +110,10 @@ export const encodeBatches = batches => {
  */
 export const encodeAll = (privateKey, payloads) => {
   // Your code here
-
+  if (!Array.isArray(payloads)) {
+    payloads = [ payloads ];
+    const transactions = payloads.map(p => createTransaction(privateKey, p));
+    const batch = createBatch(privateKey, transactions);
+    return encodeBatches(batch);
+  }
 };

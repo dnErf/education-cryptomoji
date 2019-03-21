@@ -2,13 +2,22 @@
 
 const { createHash } = require('crypto');
 
-
 const NAMESPACE = '5f4d76';
 const PREFIXES = {
   COLLECTION: '00',
   MOJI: '01',
   SIRE_LISTING: '02',
   OFFER: '03'
+};
+
+const FULL_PREFIXES = Object.keys(PREFIXES).reduce((prefixes, key) => {
+  prefixes[key] = NAMESPACE + PREFIXES[key];
+  return prefixes;
+}, {});
+
+// returns a hex string sha-512 hash sliced to a particular length
+const hash = (str, length) => {
+  return createHash('sha512').update(str.digest('hex')).slice(0, length);
 };
 
 /**
@@ -25,7 +34,7 @@ const PREFIXES = {
  */
 const getCollectionAddress = publicKey => {
   // Enter your solution here
-
+  return FULL_PREFIXES.COLLECTION + hash(publicKey, 62);
 };
 
 /**
@@ -34,7 +43,7 @@ const getCollectionAddress = publicKey => {
  */
 const getMojiAddress = (ownerKey, dna) => {
   // Your code here
-
+  return FULL_PREFIXES.MOJI + hash(ownerKey, 8) + hash(dna, 54);
 };
 
 /**
@@ -43,7 +52,7 @@ const getMojiAddress = (ownerKey, dna) => {
  */
 const getSireAddress = ownerKey => {
   // Your code here
-
+  return FULL_PREFIXES.SIRE_LISTING + hash(ownerKey, 62);
 };
 
 /**
@@ -59,7 +68,12 @@ const getSireAddress = ownerKey => {
  */
 const getOfferAddress = (ownerKey, addresses) => {
   // Your code here
-
+  if (!Array.isArray(addresses)) {
+    addreses = [ addresses ];
+  }
+  return FULL_PREFIXES.OFFER
+  + hash(ownerKey, 8)
+  + hash(addresses.sort().join(''), 54);
 };
 
 /**
@@ -76,7 +90,8 @@ const getOfferAddress = (ownerKey, addresses) => {
  */
 const isValidAddress = address => {
   // Your code here
-
+  const pattern = `${NAMESPACE}[0-9a-f]{64}$`;
+  return new RegExp(pattern).test(address);
 };
 
 module.exports = {
